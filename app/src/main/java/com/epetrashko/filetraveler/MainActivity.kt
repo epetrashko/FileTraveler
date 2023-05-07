@@ -77,7 +77,6 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
                     cpiFiles.setVisibility(false)
                 }
                 is MainState.Loading -> {
-                    rvFiles.setVisibility(false)
                     cpiFiles.setVisibility(true)
                 }
                 is MainState.Error -> {

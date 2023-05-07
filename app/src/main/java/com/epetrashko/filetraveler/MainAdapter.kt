@@ -2,12 +2,26 @@ package com.epetrashko.filetraveler
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.epetrashko.filetraveler.databinding.ItemFileBinding
 
-class MainAdapter(var files: List<FilePresentation>, val callback: FileItemCallback) :
-    RecyclerView.Adapter<MainAdapter.MainViewHolder>() {
+class DiffCallback : DiffUtil.ItemCallback<FilePresentation>() {
+    override fun areItemsTheSame(
+        oldItem: FilePresentation,
+        newItem: FilePresentation
+    ): Boolean = oldItem.path == newItem.path
+
+    override fun areContentsTheSame(
+        oldItem: FilePresentation,
+        newItem: FilePresentation
+    ): Boolean = oldItem == newItem
+
+}
+
+class MainAdapter(var files: List<FilePresentation>, private val callback: FileItemCallback) :
+    ListAdapter<FilePresentation, MainAdapter.MainViewHolder>(DiffCallback()) {
 
 
     class MainViewHolder(val binding: ItemFileBinding) : ViewHolder(binding.root)
@@ -42,7 +56,7 @@ class MainAdapter(var files: List<FilePresentation>, val callback: FileItemCallb
 
     fun updateList(newFiles: List<FilePresentation>) {
         files = newFiles
-        notifyDataSetChanged()
+        submitList(newFiles)
     }
 
 }
