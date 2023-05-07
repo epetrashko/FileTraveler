@@ -19,3 +19,5 @@ fun LifecycleOwner.launchWhenStarted(block: suspend () -> Unit) {
     }
 }
 
+fun String.getExtensionOrNull(): String? = substringAfterLast(".").ifEmpty { null }
+

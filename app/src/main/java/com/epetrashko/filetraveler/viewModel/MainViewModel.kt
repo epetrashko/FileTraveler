@@ -5,10 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.epetrashko.domain.entity.FileEntity
 import com.epetrashko.domain.repository.FilesRepository
+import com.epetrashko.filetraveler.FilePresentation
+import com.epetrashko.filetraveler.utils.FileManager
 import com.epetrashko.filetraveler.utils.FilePresentationConverter
 import com.epetrashko.filetraveler.utils.MainSorter
 import com.epetrashko.filetraveler.utils.SortDirection
+import com.epetrashko.filetraveler.utils.getExtensionOrNull
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.File
 import java.util.Stack
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -21,9 +25,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val filesRepository: FilesRepository,
+    private val fileManager: FileManager,
     private val filePresentationConverter: FilePresentationConverter,
     private val mainSorter: MainSorter
 ) : ViewModel() {
@@ -95,15 +101,26 @@ class MainViewModel @Inject constructor(
         _state.value = MainState.Error(_state.value.currentRoute)
     }
 
-    fun onFileClick(name: String, isDirectory: Boolean) {
-        if (isDirectory) navigateTo(name)
+    fun onFileClick(file: FilePresentation) {
+        if (file.isDirectory) navigateTo(file.name)
         else {
-            // TODO open file
+            openFile(file.path, file.name.getExtensionOrNull())
         }
     }
 
-    fun onFileLongClick(name: String, isDirectory: Boolean) {
-        if (isDirectory) {
+    private fun openFile(path: String, extension: String?) {
+        viewModelScope.launch {
+            _news.emit(
+                MainNews.OpenFile(
+                    mimeType = fileManager.getMimeTypeByExtension(extension),
+                    data = fileManager.getUriForFile(File(path))
+                )
+            )
+        }
+    }
+
+    fun onFileLongClick(file: FilePresentation) {
+        if (file.isDirectory) {
             // TODO
         } else {
             // TODO share file

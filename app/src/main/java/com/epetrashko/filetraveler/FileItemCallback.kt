@@ -2,8 +2,8 @@ package com.epetrashko.filetraveler
 
 interface FileItemCallback {
 
-    fun onClick(name: String, isDirectory: Boolean)
+    fun onClick(file: FilePresentation)
 
-    fun onLongClick(name: String, isDirectory: Boolean)
+    fun onLongClick(file: FilePresentation)
 
 }

@@ -1,10 +1,14 @@
 package com.epetrashko.filetraveler
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -98,6 +102,10 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
             viewModel.news.collect { news ->
                 when (news) {
                     MainNews.Finish -> finish()
+                    is MainNews.OpenFile -> requestToOpenFile(
+                        mimeType = news.mimeType,
+                        data = news.data
+                    )
                 }
             }
         }
@@ -137,7 +145,7 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
 
     private fun showSortDialog() {
         AlertDialog.Builder(this)
-            .setTitle(resources.getString(R.string.sort_title))
+            .setTitle(getString(R.string.sort_title))
             .setSingleChoiceItems(
                 SortDirection.getStringValues(this),
                 viewModel.sortDirection.id
@@ -147,12 +155,27 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
             }.show()
     }
 
-    override fun onClick(name: String, isDirectory: Boolean) {
-        viewModel.onFileClick(name, isDirectory)
+    private fun requestToOpenFile(mimeType: String?, data: Uri) {
+        val newIntent = Intent(Intent.ACTION_VIEW)
+        newIntent.setDataAndType(data, mimeType)
+        newIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+        try {
+            startActivity(newIntent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(
+                this,
+                getString(R.string.no_application_found_for_opening),
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
-    override fun onLongClick(name: String, isDirectory: Boolean) {
-        viewModel.onFileLongClick(name, isDirectory)
+    override fun onClick(file: FilePresentation) {
+        viewModel.onFileClick(file)
+    }
+
+    override fun onLongClick(file: FilePresentation) {
+        viewModel.onFileLongClick(file)
     }
 
     companion object {

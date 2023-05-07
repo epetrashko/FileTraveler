@@ -2,6 +2,7 @@
     <string name="app_name">FileTraveler</string>
     <string name="file_description">%1$s | %2$s</string>
     <string name="anount_of_files">%d files</string>
+
     <string name="sort_title">Sort by</string>
     <string name="sort_by_name_asc">Sort by name (ascending)</string>
     <string name="sort_by_name_desc">Sort by name (descending)</string>
@@ -11,4 +12,7 @@
     <string name="sort_by_date_of_creation_desc">Sort by date of creation (descending)</string>
     <string name="sort_by_extension_asc">Sort by extension (ascending)</string>
     <string name="sort_by_extension_desc">Sort by extension (descending)</string>
+
+    <string name="no_application_found_for_opening">No application was found that could open this file</string>
+
 </resources>
