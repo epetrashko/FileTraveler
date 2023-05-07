@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -40,32 +42,38 @@ class MainViewModel @Inject constructor(
     var sortDirection: SortDirection = SortDirection.BY_NAME_ASC
         private set
 
+    private val mutex = Mutex()
+
     private val _news = MutableSharedFlow<MainNews>()
     val news: SharedFlow<MainNews>
         get() = _news.asSharedFlow()
 
     fun navigateTo(directoryName: String? = null, isWithPush: Boolean = true) {
-        if (isWithPush)
-            directoryName?.let(routesStack::push)
-        _state.value = MainState.Loading(absoluteRoute)
-        kotlin.runCatching {
-            currentUnprocessedFiles = mainSorter(
-                list = filesRepository.getFilesByRoute(absoluteRoute),
-                id = sortDirection.id
-            )
-            currentUnprocessedFiles
-                .map(filePresentationConverter::invoke)
-        }.fold(
-            onSuccess = {
-                _state.value = MainState.Data(
-                    currentRoute = absoluteRoute,
-                    files = it
+        viewModelScope.launch {
+            mutex.withLock {
+                if (isWithPush)
+                    directoryName?.let(routesStack::push)
+                _state.value = MainState.Loading(absoluteRoute)
+                kotlin.runCatching {
+                    currentUnprocessedFiles = mainSorter(
+                        list = filesRepository.getFilesByRoute(absoluteRoute),
+                        id = sortDirection.id
+                    )
+                    currentUnprocessedFiles
+                        .map(filePresentationConverter::invoke)
+                }.fold(
+                    onSuccess = {
+                        _state.value = MainState.Data(
+                            currentRoute = absoluteRoute,
+                            files = it
+                        )
+                    },
+                    onFailure = {
+                        _state.value = MainState.Error(absoluteRoute)
+                    }
                 )
-            },
-            onFailure = {
-                _state.value = MainState.Error(absoluteRoute)
             }
-        )
+        }
     }
 
     fun updateSortDirection(id: Int) {
