@@ -3,4 +3,5 @@
     <dimen name="file_card_height">64dp</dimen>
     <dimen name="file_card_padding">8dp</dimen>
     <dimen name="file_card_margin">4dp</dimen>
+    <dimen name="file_card_text_margin">10dp</dimen>
 </resources>

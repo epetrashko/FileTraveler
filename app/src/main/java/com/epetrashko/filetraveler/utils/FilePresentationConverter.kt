@@ -11,7 +11,8 @@ import javax.inject.Inject
 
 class FilePresentationConverter @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val resourceManager: ResourceManager
+    private val resourceManager: ResourceManager,
+    private val fileIconConverter: FileIconConverter
 ) {
 
     private val formatter = SimpleDateFormat("dd/M/yy h:mm a")
@@ -19,14 +20,14 @@ class FilePresentationConverter @Inject constructor(
     operator fun invoke(entity: FileEntity): FilePresentation =
         when (entity) {
             is FileEntity.File -> FilePresentation(
-                name = entity.name + entity.extension,
+                name = entity.name,
                 description = getPrettyDescription(
                     getPrettySize(bytes = entity.sizeInBytes),
                     getPrettyTime(time = entity.creationTimestamp)
                 ),
                 path = entity.path,
                 isDirectory = false,
-                icon = R.drawable.file
+                icon = fileIconConverter.invoke(entity.extension)
             )
             is FileEntity.Directory -> FilePresentation(
                 name = entity.name,

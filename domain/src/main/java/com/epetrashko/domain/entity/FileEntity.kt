@@ -10,7 +10,7 @@ sealed class FileEntity(
         override val name: String,
         val sizeInBytes: Long,
         override val creationTimestamp: Long,
-        val extension: String?,
+        val extension: String,
         override val path: String
     ) : FileEntity(
         name = name,
