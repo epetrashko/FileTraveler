@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">FileTraveler</string>
+
+<!--    <string name="size_in_bytes">%dB</string>-->
+<!--    <string name="size_in_kb">%dKB</string>-->
+<!--    <string name="size_in_mb">%dMB</string>-->
+<!--    <string name="size_in_gb">%dGB</string>-->
+    <string name="file_description">%1$s | %2$s</string>
+    <string name="anount_of_files">%d files</string>
 </resources>

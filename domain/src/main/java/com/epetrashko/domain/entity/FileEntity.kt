@@ -21,7 +21,8 @@ sealed class FileEntity(
     data class Directory(
         override val name: String,
         override val creationTimestamp: Long,
-        override val path: String
+        override val path: String,
+        val filesAmount: Int
     ) : FileEntity(
         name = name,
         creationTimestamp = creationTimestamp,

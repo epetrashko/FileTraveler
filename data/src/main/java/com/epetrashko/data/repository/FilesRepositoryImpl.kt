@@ -23,7 +23,8 @@ internal class FilesRepositoryImpl @Inject constructor() : FilesRepository {
                     FileEntity.Directory(
                         name = file.name,
                         path = path,
-                        creationTimestamp = getFileCreationTimeStamp(path = path)
+                        creationTimestamp = getFileCreationTimeStamp(path = path),
+                        filesAmount = file.listFiles()?.size ?: 0
                     )
                 )
             } else {
