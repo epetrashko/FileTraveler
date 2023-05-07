@@ -18,7 +18,7 @@ class FileManager @Inject constructor(
     fun getUriForFile(file: File): Uri =
         FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
 
-    fun getMimeTypeByExtension(extension: String?): String? =
-        mimeMap.getMimeTypeFromExtension(extension)
+    fun getMimeTypeByExtension(extension: String?): String =
+        mimeMap.getMimeTypeFromExtension(extension) ?: "*/*"
 
 }

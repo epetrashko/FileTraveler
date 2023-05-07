@@ -14,5 +14,6 @@
     <string name="sort_by_extension_desc">Sort by extension (descending)</string>
 
     <string name="no_application_found_for_opening">No application was found that could open this file</string>
+    <string name="no_application_found_for_sharing">No application was found where you could send this file</string>
 
 </resources>

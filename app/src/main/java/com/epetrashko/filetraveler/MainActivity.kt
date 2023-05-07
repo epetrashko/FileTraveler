@@ -47,10 +47,6 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
         onBackPressedDispatcher.addCallback {
             viewModel.goBack()
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
         if (checkPermissions())
             viewModel.navigateTo()
         else
@@ -106,6 +102,10 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
                         mimeType = news.mimeType,
                         data = news.data
                     )
+                    is MainNews.ShareFile -> requestToShareFile(
+                        mimeType = news.mimeType,
+                        data = news.data
+                    )
                 }
             }
         }
@@ -156,11 +156,34 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
     }
 
     private fun requestToOpenFile(mimeType: String?, data: Uri) {
-        val newIntent = Intent(Intent.ACTION_VIEW)
-        newIntent.setDataAndType(data, mimeType)
-        newIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
         try {
-            startActivity(newIntent)
+            startActivity(
+                Intent(Intent.ACTION_VIEW)
+                    .apply {
+                        setDataAndType(data, mimeType)
+                        flags =
+                            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    }
+            )
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(
+                this,
+                getString(R.string.no_application_found_for_opening),
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun requestToShareFile(mimeType: String?, data: Uri) {
+        try {
+            startActivity(
+                Intent(Intent.ACTION_SEND)
+                    .apply {
+                        type = mimeType
+                        putExtra(Intent.EXTRA_STREAM, data)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+            )
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(
                 this,

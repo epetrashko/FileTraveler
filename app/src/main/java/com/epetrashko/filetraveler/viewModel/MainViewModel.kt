@@ -120,10 +120,20 @@ class MainViewModel @Inject constructor(
     }
 
     fun onFileLongClick(file: FilePresentation) {
-        if (file.isDirectory) {
-            // TODO
-        } else {
-            // TODO share file
+        if (!file.isDirectory) shareFile(
+            path = file.path,
+            extension = file.name.getExtensionOrNull()
+        )
+    }
+
+    private fun shareFile(path: String, extension: String?) {
+        viewModelScope.launch {
+            _news.emit(
+                MainNews.ShareFile(
+                    mimeType = fileManager.getMimeTypeByExtension(extension),
+                    data = fileManager.getUriForFile(File(path))
+                )
+            )
         }
     }
 
