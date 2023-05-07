@@ -1,10 +1,14 @@
 <resources>
     <string name="app_name">FileTraveler</string>
-
-<!--    <string name="size_in_bytes">%dB</string>-->
-<!--    <string name="size_in_kb">%dKB</string>-->
-<!--    <string name="size_in_mb">%dMB</string>-->
-<!--    <string name="size_in_gb">%dGB</string>-->
     <string name="file_description">%1$s | %2$s</string>
     <string name="anount_of_files">%d files</string>
+    <string name="sort_title">Sort by</string>
+    <string name="sort_by_name_asc">Sort by name (ascending)</string>
+    <string name="sort_by_name_desc">Sort by name (descending)</string>
+    <string name="sort_by_size_asc">Sort by size (ascending)</string>
+    <string name="sort_by_size_desc">Sort by size (descending)</string>
+    <string name="sort_by_date_of_creation_asc">Sort by date of creation (ascending)</string>
+    <string name="sort_by_date_of_creation_desc">Sort by date of creation (descending)</string>
+    <string name="sort_by_extension_asc">Sort by extension (ascending)</string>
+    <string name="sort_by_extension_desc">Sort by extension (descending)</string>
 </resources>

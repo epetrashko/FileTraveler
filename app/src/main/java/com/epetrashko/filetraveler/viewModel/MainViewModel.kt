@@ -3,8 +3,11 @@ package com.epetrashko.filetraveler.viewModel
 import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.epetrashko.domain.entity.FileEntity
 import com.epetrashko.domain.repository.FilesRepository
 import com.epetrashko.filetraveler.utils.FilePresentationConverter
+import com.epetrashko.filetraveler.utils.MainSorter
+import com.epetrashko.filetraveler.utils.SortDirection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.Stack
 import javax.inject.Inject
@@ -19,7 +22,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val filesRepository: FilesRepository,
-    private val filePresentationConverter: FilePresentationConverter
+    private val filePresentationConverter: FilePresentationConverter,
+    private val mainSorter: MainSorter
 ) : ViewModel() {
 
     private var routesStack: Stack<String> = Stack()
@@ -31,16 +35,25 @@ class MainViewModel @Inject constructor(
     val state: StateFlow<MainState>
         get() = _state.asStateFlow()
 
+    private var currentUnprocessedFiles: List<FileEntity> = listOf()
+
+    var sortDirection: SortDirection = SortDirection.BY_NAME_ASC
+        private set
+
     private val _news = MutableSharedFlow<MainNews>()
     val news: SharedFlow<MainNews>
         get() = _news.asSharedFlow()
 
-    fun navigateTo(directoryName: String? = null, isNewRoute: Boolean = true) {
-        if (isNewRoute)
+    fun navigateTo(directoryName: String? = null, isWithPush: Boolean = true) {
+        if (isWithPush)
             directoryName?.let(routesStack::push)
         _state.value = MainState.Loading(absoluteRoute)
         kotlin.runCatching {
-            filesRepository.getFilesByRoute(absoluteRoute)
+            currentUnprocessedFiles = mainSorter(
+                list = filesRepository.getFilesByRoute(absoluteRoute),
+                id = sortDirection.id
+            )
+            currentUnprocessedFiles
                 .map(filePresentationConverter::invoke)
         }.fold(
             onSuccess = {
@@ -55,12 +68,17 @@ class MainViewModel @Inject constructor(
         )
     }
 
+    fun updateSortDirection(id: Int) {
+        sortDirection = SortDirection.values().find { it.id == id } ?: SortDirection.BY_NAME_ASC
+        navigateTo(isWithPush = false)
+    }
+
     fun goBack() {
         viewModelScope.launch {
             if (routesStack.empty()) _news.emit(MainNews.Finish)
             else {
                 routesStack.pop()
-                navigateTo(directoryName = absoluteRoute, isNewRoute = false)
+                navigateTo(directoryName = absoluteRoute, isWithPush = false)
             }
         }
     }
