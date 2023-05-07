@@ -25,13 +25,13 @@ class MainAdapter(var files: List<FilePresentation>, val callback: FileItemCallb
                 fileImg.setImageResource(icon)
                 root.setOnClickListener {
                     callback.onClick(
-                        path = path,
+                        name = name,
                         isDirectory = isDirectory
                     )
                 }
                 root.setOnLongClickListener {
                     callback.onLongClick(
-                        path = path,
+                        name = name,
                         isDirectory = isDirectory
                     )
                     true

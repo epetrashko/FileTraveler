@@ -3,6 +3,7 @@ package com.epetrashko.filetraveler
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -11,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.epetrashko.filetraveler.databinding.ActivityMainBinding
 import com.epetrashko.filetraveler.utils.launchWhenStarted
 import com.epetrashko.filetraveler.utils.setVisibility
+import com.epetrashko.filetraveler.viewModel.MainNews
 import com.epetrashko.filetraveler.viewModel.MainState
 import com.epetrashko.filetraveler.viewModel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,10 +34,9 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
         binding.rvFiles.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
         setContentView(binding.root)
-        launchWhenStarted {
-            viewModel.state.collectLatest { state ->
-                handleState(state)
-            }
+        handleFlows()
+        onBackPressedDispatcher.addCallback {
+            viewModel.goBack()
         }
     }
 
@@ -49,6 +50,7 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
 
     private fun handleState(state: MainState) {
         with(binding) {
+            tvFullRoute.text = state.currentRoute
             when (state) {
                 is MainState.Data -> {
                     adapter.updateList(state.files)
@@ -65,6 +67,21 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
                 }
             }
 
+        }
+    }
+
+    private fun handleFlows() {
+        launchWhenStarted {
+            viewModel.state.collectLatest { state ->
+                handleState(state)
+            }
+        }
+        launchWhenStarted {
+            viewModel.news.collect { news ->
+                when (news) {
+                    MainNews.Finish -> finish()
+                }
+            }
         }
     }
 
@@ -100,6 +117,14 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
             PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this, perm)
         }
 
+    override fun onClick(name: String, isDirectory: Boolean) {
+        viewModel.onFileClick(name, isDirectory)
+    }
+
+    override fun onLongClick(name: String, isDirectory: Boolean) {
+        viewModel.onFileLongClick(name, isDirectory)
+    }
+
     companion object {
         private val EXTERNAL_PERMS = arrayOf(
             android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -107,13 +132,5 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
         )
 
         private const val EXTERNAL_REQUEST = 66
-    }
-
-    override fun onClick(path: String, isDirectory: Boolean) {
-        viewModel.onFileClick(path, isDirectory)
-    }
-
-    override fun onLongClick(path: String, isDirectory: Boolean) {
-        viewModel.onFileLongClick(path, isDirectory)
     }
 }

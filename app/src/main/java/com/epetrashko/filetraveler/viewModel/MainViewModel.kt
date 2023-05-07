@@ -1,13 +1,20 @@
 package com.epetrashko.filetraveler.viewModel
 
+import android.os.Environment
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.epetrashko.domain.repository.FilesRepository
 import com.epetrashko.filetraveler.utils.FilePresentationConverter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.Stack
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -15,40 +22,61 @@ class MainViewModel @Inject constructor(
     private val filePresentationConverter: FilePresentationConverter
 ) : ViewModel() {
 
+    private var routesStack: Stack<String> = Stack()
+    private val absoluteRoute: String
+        get() = if (routesStack.empty()) basePATH
+        else basePATH + "/" + routesStack.joinToString(separator = "/")
+
     private val _state = MutableStateFlow<MainState>(MainState.Loading(null))
     val state: StateFlow<MainState>
         get() = _state.asStateFlow()
 
-    fun navigateTo(route: String? = null) {
-        _state.value = MainState.Loading(route)
+    private val _news = MutableSharedFlow<MainNews>()
+    val news: SharedFlow<MainNews>
+        get() = _news.asSharedFlow()
+
+    fun navigateTo(directoryName: String? = null, isNewRoute: Boolean = true) {
+        if (isNewRoute)
+            directoryName?.let(routesStack::push)
+        _state.value = MainState.Loading(absoluteRoute)
         kotlin.runCatching {
-            filesRepository.getFilesByRoute(route)
+            filesRepository.getFilesByRoute(absoluteRoute)
                 .map(filePresentationConverter::invoke)
         }.fold(
             onSuccess = {
                 _state.value = MainState.Data(
-                    currentRoute = route,
+                    currentRoute = absoluteRoute,
                     files = it
                 )
             },
             onFailure = {
-                _state.value = MainState.Error(route)
+                _state.value = MainState.Error(absoluteRoute)
             }
         )
+    }
+
+    fun goBack() {
+        viewModelScope.launch {
+            if (routesStack.empty()) _news.emit(MainNews.Finish)
+            else {
+                routesStack.pop()
+                navigateTo(directoryName = absoluteRoute, isNewRoute = false)
+            }
+        }
     }
 
     fun showError() {
         _state.value = MainState.Error(_state.value.currentRoute)
     }
 
-    fun onFileClick(path: String, isDirectory: Boolean) {
-        if (isDirectory) navigateTo(path)
+    fun onFileClick(name: String, isDirectory: Boolean) {
+        if (isDirectory) navigateTo(name)
         else {
             // TODO open file
         }
     }
 
-    fun onFileLongClick(path: String, isDirectory: Boolean) {
+    fun onFileLongClick(name: String, isDirectory: Boolean) {
         if (isDirectory) {
             // TODO
         } else {
@@ -56,7 +84,9 @@ class MainViewModel @Inject constructor(
         }
     }
 
-
+    companion object {
+        private val basePATH = Environment.getExternalStorageDirectory().path
+    }
 
 
 }

@@ -4,4 +4,5 @@
     <dimen name="file_card_padding">8dp</dimen>
     <dimen name="file_card_margin">4dp</dimen>
     <dimen name="file_card_text_margin">10dp</dimen>
+    <dimen name="full_route_text_size">18sp</dimen>
 </resources>
