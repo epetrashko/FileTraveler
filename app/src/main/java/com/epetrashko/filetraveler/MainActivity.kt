@@ -1,24 +1,25 @@
 package com.epetrashko.filetraveler
 
-import android.content.ActivityNotFoundException
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.epetrashko.filetraveler.databinding.ActivityMainBinding
 import com.epetrashko.filetraveler.utils.SortDirection
+import com.epetrashko.filetraveler.utils.checkRequiredPermissions
 import com.epetrashko.filetraveler.utils.launchWhenStarted
+import com.epetrashko.filetraveler.utils.requestToOpenFile
+import com.epetrashko.filetraveler.utils.requestToShareFile
 import com.epetrashko.filetraveler.utils.setVisibility
 import com.epetrashko.filetraveler.viewModel.MainNews
 import com.epetrashko.filetraveler.viewModel.MainState
@@ -35,6 +36,18 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
 
     private lateinit var adapter: MainAdapter
 
+    private lateinit var service: MainService
+    private val serviceConnection: ServiceConnection = object : ServiceConnection {
+
+        override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
+            val binder = p1 as MainService.MainBinder
+            service = binder.getService()
+            viewModel.startService()
+        }
+
+        override fun onServiceDisconnected(p0: ComponentName?) = Unit
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -44,13 +57,11 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
             LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
         setContentView(binding.root)
         handleFlows()
-        onBackPressedDispatcher.addCallback {
-            viewModel.goBack()
-        }
-        if (checkPermissions())
+        addOnBackListener()
+        proceedIfHasPermissions {
+            startFileService()
             viewModel.navigateTo()
-        else
-            viewModel.showError()
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -66,6 +77,36 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
             }
             else -> super.onOptionsItemSelected(item)
         }
+
+    override fun onDestroy() {
+        stopService(Intent(this, MainService::class.java))
+        super.onDestroy()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == EXTERNAL_REQUEST) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                viewModel.navigateTo()
+            } else {
+                viewModel.showError()
+            }
+        }
+    }
+
+    override fun onClick(file: FilePresentation) {
+        proceedIfHasPermissions {
+            viewModel.onFileClick(file)
+        }
+    }
+
+    override fun onLongClick(file: FilePresentation) {
+        viewModel.onFileLongClick(file)
+    }
 
     private fun handleState(state: MainState) {
         with(binding) {
@@ -98,6 +139,8 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
             viewModel.news.collect { news ->
                 when (news) {
                     MainNews.Finish -> finish()
+                    MainNews.StartService ->
+                        kotlin.runCatching { service.updateHashJob() }
                     is MainNews.OpenFile -> requestToOpenFile(
                         mimeType = news.mimeType,
                         data = news.data
@@ -111,37 +154,25 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
         }
     }
 
-    private fun checkPermissions(): Boolean {
-        var isPermissionOn = true
-        val version = Build.VERSION.SDK_INT
-        if (version >= Build.VERSION_CODES.M) {
-            if (!hasAllPermissions()) {
-                ActivityCompat.requestPermissions(this, EXTERNAL_PERMS, EXTERNAL_REQUEST)
-                isPermissionOn = false
-            }
+    private fun addOnBackListener() {
+        onBackPressedDispatcher.addCallback {
+            viewModel.goBack()
         }
-        return isPermissionOn
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
+    private fun startFileService() {
+        val i = Intent(this, MainService::class.java)
+        bindService(i, serviceConnection, Context.BIND_AUTO_CREATE)
+    }
+
+    private fun proceedIfHasPermissions(
+        action: () -> Unit
     ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == EXTERNAL_REQUEST) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                viewModel.navigateTo()
-            } else {
-                viewModel.showError()
-            }
-        }
+        if (checkRequiredPermissions(permissionCode = EXTERNAL_REQUEST, perms = EXTERNAL_PERMS))
+            action()
+        else
+            viewModel.showError()
     }
-
-    private fun hasAllPermissions(): Boolean =
-        EXTERNAL_PERMS.all { perm ->
-            PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this, perm)
-        }
 
     private fun showSortDialog() {
         AlertDialog.Builder(this)
@@ -153,52 +184,6 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
                 viewModel.updateSortDirection(i)
                 dialogInterface.cancel()
             }.show()
-    }
-
-    private fun requestToOpenFile(mimeType: String?, data: Uri) {
-        try {
-            startActivity(
-                Intent(Intent.ACTION_VIEW)
-                    .apply {
-                        setDataAndType(data, mimeType)
-                        flags =
-                            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    }
-            )
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(
-                this,
-                getString(R.string.no_application_found_for_opening),
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    private fun requestToShareFile(mimeType: String?, data: Uri) {
-        try {
-            startActivity(
-                Intent(Intent.ACTION_SEND)
-                    .apply {
-                        type = mimeType
-                        putExtra(Intent.EXTRA_STREAM, data)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-            )
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(
-                this,
-                getString(R.string.no_application_found_for_opening),
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    override fun onClick(file: FilePresentation) {
-        viewModel.onFileClick(file)
-    }
-
-    override fun onLongClick(file: FilePresentation) {
-        viewModel.onFileLongClick(file)
     }
 
     companion object {

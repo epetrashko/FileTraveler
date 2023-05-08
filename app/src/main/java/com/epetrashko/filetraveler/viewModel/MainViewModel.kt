@@ -4,7 +4,8 @@ import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.epetrashko.domain.entity.FileEntity
-import com.epetrashko.domain.repository.FilesRepository
+import com.epetrashko.domain.usecase.GetFilesByRouteUseCase
+import com.epetrashko.domain.usecase.ObserveChangedFilesUseCase
 import com.epetrashko.filetraveler.FilePresentation
 import com.epetrashko.filetraveler.utils.FileManager
 import com.epetrashko.filetraveler.utils.FilePresentationConverter
@@ -15,12 +16,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import java.util.Stack
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -28,20 +29,20 @@ import kotlinx.coroutines.sync.withLock
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val filesRepository: FilesRepository,
+    private val getFilesByRouteUseCase: GetFilesByRouteUseCase,
+    private val observeChangedFilesUseCase: ObserveChangedFilesUseCase,
     private val fileManager: FileManager,
     private val filePresentationConverter: FilePresentationConverter,
-    private val mainSorter: MainSorter
+    private val mainSorter: MainSorter,
 ) : ViewModel() {
 
     private var routesStack: Stack<String> = Stack()
     private val absoluteRoute: String
         get() = if (routesStack.empty()) basePATH
-        else basePATH + "/" + routesStack.joinToString(separator = "/")
+        else "$basePATH$PATH_SEPARATOR${routesStack.joinToString(PATH_SEPARATOR)}"
 
     private val _state = MutableStateFlow<MainState>(MainState.Loading(null))
-    val state: StateFlow<MainState>
-        get() = _state.asStateFlow()
+    val state: Flow<MainState> = combineStates()
 
     private var currentUnprocessedFiles: List<FileEntity> = listOf()
 
@@ -62,7 +63,7 @@ class MainViewModel @Inject constructor(
                 _state.value = MainState.Loading(absoluteRoute)
                 kotlin.runCatching {
                     currentUnprocessedFiles = mainSorter(
-                        list = filesRepository.getFilesByRoute(absoluteRoute),
+                        list = getFilesByRouteUseCase(absoluteRoute),
                         id = sortDirection.id
                     )
                     currentUnprocessedFiles
@@ -79,6 +80,12 @@ class MainViewModel @Inject constructor(
                     }
                 )
             }
+        }
+    }
+
+    fun startService() {
+        viewModelScope.launch {
+            _news.emit(MainNews.StartService)
         }
     }
 
@@ -137,8 +144,34 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private fun combineStates(): Flow<MainState> =
+        combine(_state, observeChangedFilesUseCase()) { state, changedFilePaths ->
+            when (state) {
+                is MainState.Data -> {
+                    state.copy(
+                        files = markChangedFiles(
+                            files = state.files,
+                            changedFilePaths = changedFilePaths
+                        )
+                    )
+                }
+                else -> state
+            }
+        }
+
+    private fun markChangedFiles(
+        files: List<FilePresentation>,
+        changedFilePaths: Set<String>
+    ): List<FilePresentation> =
+        if (changedFilePaths.isEmpty()) files
+        else files.map { file ->
+            if (file.path in changedFilePaths) file.copy(isChanged = true)
+            else file
+        }
+
     companion object {
         private val basePATH = Environment.getExternalStorageDirectory().path
+        private const val PATH_SEPARATOR = "/"
     }
 
 

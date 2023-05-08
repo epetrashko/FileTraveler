@@ -7,5 +7,6 @@ data class FilePresentation(
     val description: String,
     val path: String,
     val isDirectory: Boolean,
-    @DrawableRes val icon: Int
+    @DrawableRes val icon: Int,
+    val isChanged: Boolean = false
 )

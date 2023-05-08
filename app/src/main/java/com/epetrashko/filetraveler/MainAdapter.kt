@@ -6,6 +6,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.epetrashko.filetraveler.databinding.ItemFileBinding
+import com.epetrashko.filetraveler.utils.setVisibility
 
 class DiffCallback : DiffUtil.ItemCallback<FilePresentation>() {
     override fun areItemsTheSame(
@@ -37,6 +38,7 @@ class MainAdapter(var files: List<FilePresentation>, private val callback: FileI
                 fileName.text = name
                 fileDescription.text = description
                 fileImg.setImageResource(icon)
+                ivFileChanged.setVisibility(isChanged)
                 root.setOnClickListener {
                     callback.onClick(this)
                 }

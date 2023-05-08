@@ -11,11 +11,10 @@
         android:id="@+id/tv_full_route"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/white"
-        android:maxLines="1"
-        android:ellipsize="start"
-        android:textSize="@dimen/full_route_text_size"
         android:layout_marginHorizontal="@dimen/file_card_margin"
+        android:ellipsize="start"
+        android:maxLines="1"
+        android:textSize="@dimen/full_route_text_size"
         app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.recyclerview.widget.RecyclerView
