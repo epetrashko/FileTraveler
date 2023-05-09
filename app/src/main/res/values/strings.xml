@@ -18,4 +18,11 @@
     <string name="unexpected_error">Unexpected error</string>
     <string name="error_state_text">Error! Try Again</string>
 
+    <string name="instructions_title">Instructions</string>
+    <string name="instructions_message">In order to use the application, give it access to the data storage.\n
+        Open with click\n
+        Share with long tap
+    </string>
+    <string name="instructions_positive_btn">OK</string>
+
 </resources>

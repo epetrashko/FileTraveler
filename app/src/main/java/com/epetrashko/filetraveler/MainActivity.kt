@@ -71,6 +71,10 @@ class MainActivity : AppCompatActivity(), FileItemActionListener {
                 viewModel.showSortDialog()
                 true
             }
+            R.id.menu_instructions -> {
+                showInstructions()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
 
@@ -185,12 +189,21 @@ class MainActivity : AppCompatActivity(), FileItemActionListener {
 
     private fun showSortDialog() {
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.sort_title))
+            .setTitle(R.string.sort_title)
             .setSingleChoiceItems(
                 SortDirection.getStringValues(this),
                 viewModel.sortDirection.id
             ) { dialogInterface, i ->
                 viewModel.updateSortDirection(i)
+                dialogInterface.cancel()
+            }.show()
+    }
+
+    private fun showInstructions() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.instructions_title)
+            .setMessage(R.string.instructions_message)
+            .setPositiveButton(R.string.instructions_positive_btn) { dialogInterface, _ ->
                 dialogInterface.cancel()
             }.show()
     }
