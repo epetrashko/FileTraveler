@@ -15,6 +15,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.epetrashko.filetraveler.databinding.ActivityMainBinding
+import com.epetrashko.filetraveler.list.MainAdapter
+import com.epetrashko.filetraveler.listener.FileItemActionListener
+import com.epetrashko.filetraveler.presentation.FilePresentation
 import com.epetrashko.filetraveler.utils.SortDirection
 import com.epetrashko.filetraveler.utils.checkRequiredPermissions
 import com.epetrashko.filetraveler.utils.launchWhenStarted
@@ -29,7 +32,7 @@ import kotlinx.coroutines.flow.collectLatest
 
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity(), FileItemCallback {
+class MainActivity : AppCompatActivity(), FileItemActionListener {
     private val viewModel by viewModels<MainViewModel>()
 
     private lateinit var binding: ActivityMainBinding
@@ -42,7 +45,7 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
             val binder = p1 as MainService.MainBinder
             service = binder.getService()
-            viewModel.startService()
+            viewModel.startServiceJob()
         }
 
         override fun onServiceDisconnected(p0: ComponentName?) = Unit
@@ -51,17 +54,10 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
-        adapter = MainAdapter(listOf(), this)
-        binding.rvFiles.adapter = adapter
-        binding.rvFiles.layoutManager =
-            LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+        initViews()
         setContentView(binding.root)
         handleFlows()
-        addOnBackListener()
-        proceedIfHasPermissions {
-            startFileService()
-            viewModel.navigateTo()
-        }
+        runJobsIfHasPermissions()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -72,16 +68,11 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
     override fun onOptionsItemSelected(item: MenuItem): Boolean =
         when (item.itemId) {
             R.id.menu_main_sort -> {
-                showSortDialog()
+                viewModel.showSortDialog()
                 true
             }
             else -> super.onOptionsItemSelected(item)
         }
-
-    override fun onDestroy() {
-        stopService(Intent(this, MainService::class.java))
-        super.onDestroy()
-    }
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -91,7 +82,7 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == EXTERNAL_REQUEST) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                viewModel.navigateTo()
+                runJobsIfHasPermissions()
             } else {
                 viewModel.showError()
             }
@@ -99,13 +90,31 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
     }
 
     override fun onClick(file: FilePresentation) {
-        proceedIfHasPermissions {
-            viewModel.onFileClick(file)
-        }
+        viewModel.onFileClick(file)
     }
 
     override fun onLongClick(file: FilePresentation) {
         viewModel.onFileLongClick(file)
+    }
+
+    override fun onDestroy() {
+        stopService(Intent(this, MainService::class.java))
+        super.onDestroy()
+    }
+
+    private fun initViews() {
+        adapter = MainAdapter(arrayListOf(), this)
+        with(binding) {
+            rvFiles.adapter = adapter
+            rvFiles.layoutManager =
+                LinearLayoutManager(this@MainActivity, LinearLayoutManager.VERTICAL, false)
+            errorStateBtn.setOnClickListener {
+                runJobsIfHasPermissions()
+            }
+        }
+        onBackPressedDispatcher.addCallback {
+            viewModel.goBack()
+        }
     }
 
     private fun handleState(state: MainState) {
@@ -115,13 +124,18 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
                 is MainState.Data -> {
                     adapter.updateList(state.files)
                     rvFiles.setVisibility(true)
+                    tvFullRoute.setVisibility(true)
                     cpiFiles.setVisibility(false)
+                    errorStateBtn.setVisibility(false)
                 }
                 is MainState.Loading -> {
                     cpiFiles.setVisibility(true)
+                    errorStateBtn.setVisibility(false)
                 }
                 is MainState.Error -> {
+                    errorStateBtn.setVisibility(true)
                     rvFiles.setVisibility(false)
+                    tvFullRoute.setVisibility(false)
                     cpiFiles.setVisibility(false)
                 }
             }
@@ -139,8 +153,10 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
             viewModel.news.collect { news ->
                 when (news) {
                     MainNews.Finish -> finish()
-                    MainNews.StartService ->
+                    MainNews.StartServiceJob ->
                         kotlin.runCatching { service.updateHashJob() }
+                    MainNews.ShowSortDialog ->
+                        showSortDialog()
                     is MainNews.OpenFile -> requestToOpenFile(
                         mimeType = news.mimeType,
                         data = news.data
@@ -154,23 +170,16 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
         }
     }
 
-    private fun addOnBackListener() {
-        onBackPressedDispatcher.addCallback {
-            viewModel.goBack()
-        }
-    }
-
     private fun startFileService() {
         val i = Intent(this, MainService::class.java)
         bindService(i, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
-    private fun proceedIfHasPermissions(
-        action: () -> Unit
-    ) {
-        if (checkRequiredPermissions(permissionCode = EXTERNAL_REQUEST, perms = EXTERNAL_PERMS))
-            action()
-        else
+    private fun runJobsIfHasPermissions() {
+        if (checkRequiredPermissions(permissionCode = EXTERNAL_REQUEST, perms = EXTERNAL_PERMS)) {
+            startFileService()
+            viewModel.navigateTo()
+        } else
             viewModel.showError()
     }
 
@@ -188,7 +197,6 @@ class MainActivity : AppCompatActivity(), FileItemCallback {
 
     companion object {
         private val EXTERNAL_PERMS = arrayOf(
-            android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
             android.Manifest.permission.READ_EXTERNAL_STORAGE
         )
 

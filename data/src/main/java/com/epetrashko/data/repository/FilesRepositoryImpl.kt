@@ -3,9 +3,9 @@ package com.epetrashko.data.repository
 import android.os.Environment
 import com.epetrashko.data.db.FilesDao
 import com.epetrashko.data.model.FileHashModel
+import com.epetrashko.data.utils.addMutably
 import com.epetrashko.domain.entity.FileEntity
 import com.epetrashko.domain.repository.FilesRepository
-import com.epetrashko.domain.utils.addMutably
 import java.io.File
 import java.io.FileInputStream
 import java.nio.file.Files

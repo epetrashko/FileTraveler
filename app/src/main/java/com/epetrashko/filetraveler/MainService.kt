@@ -4,7 +4,6 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import android.util.Log
 import com.epetrashko.domain.usecase.ObserveChangedFilesUseCase
 import com.epetrashko.domain.usecase.TraverseAndCalculateHashUseCase
 import dagger.hilt.android.AndroidEntryPoint
@@ -20,6 +19,7 @@ class MainService : Service() {
 
     @Inject
     lateinit var traverseUseCase: TraverseAndCalculateHashUseCase
+
     @Inject
     lateinit var observeChangedFilesUseCase: ObserveChangedFilesUseCase
 
@@ -28,17 +28,26 @@ class MainService : Service() {
 
     private val binder: MainBinder = MainBinder()
 
+    private var isJobStarted: Boolean = false
+
     override fun onBind(p0: Intent?): IBinder = binder
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return START_STICKY
+    }
+
     override fun onDestroy() {
-        Log.d("jfdhdhfuyfdh", "Stop service")
         job.cancelChildren()
+        isJobStarted = false
         super.onDestroy()
     }
 
     fun updateHashJob() {
-        scope.launch {
-            traverseUseCase()
+        if (!isJobStarted) {
+            isJobStarted = true
+            scope.launch {
+                traverseUseCase()
+            }
         }
     }
 

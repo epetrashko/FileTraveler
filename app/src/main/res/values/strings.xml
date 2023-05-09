@@ -16,5 +16,6 @@
     <string name="no_application_found_for_opening">No application was found that could open this file</string>
     <string name="no_application_found_for_sharing">No application was found where you could send this file</string>
     <string name="unexpected_error">Unexpected error</string>
+    <string name="error_state_text">Error! Try Again</string>
 
 </resources>

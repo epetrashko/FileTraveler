@@ -27,5 +27,4 @@ object DatabaseModule {
     fun filesDao(db: AppDatabase): FilesDao =
         db.filesDao()
 
-
 }

@@ -1,4 +1,4 @@
-package com.epetrashko.filetraveler.utils
+package com.epetrashko.filetraveler.converter
 
 import com.epetrashko.filetraveler.R
 import javax.inject.Inject
@@ -12,7 +12,8 @@ class FileIconConverter @Inject constructor() {
             "txt" -> R.drawable.icon_txt
             "pdf" -> R.drawable.icon_pdf
             "mp3" -> R.drawable.icon_mp3
-            else -> R.drawable.file
+            "mp4" -> R.drawable.icon_mp4
+            else -> R.drawable.icon_file
         }
 
 }

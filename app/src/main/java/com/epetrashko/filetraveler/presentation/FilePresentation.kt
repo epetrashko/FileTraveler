@@ -1,4 +1,4 @@
-package com.epetrashko.filetraveler
+package com.epetrashko.filetraveler.presentation
 
 import androidx.annotation.DrawableRes
 

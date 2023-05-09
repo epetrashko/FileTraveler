@@ -9,4 +9,5 @@ class GetFilesByRouteUseCase @Inject constructor(
 
     suspend operator fun invoke(route: String) =
         filesRepository.getFilesByRoute(route)
+
 }

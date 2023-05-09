@@ -8,13 +8,14 @@ import com.epetrashko.data.model.FileHashModel
 
 @Dao
 interface FilesDao {
+
     @Query("SELECT * FROM ${TableNames.FilesTableName}")
     fun getAll(): List<FileHashModel>
-
 
     @Update
     fun updateFileHash(file: FileHashModel)
 
     @Insert
     fun addFileHash(file: FileHashModel)
+
 }

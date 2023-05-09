@@ -35,7 +35,7 @@ fun AppCompatActivity.checkRequiredPermissions(permissionCode: Int, vararg perms
     var isPermissionOn = true
     val version = Build.VERSION.SDK_INT
     if (version >= Build.VERSION_CODES.M) {
-        if (!hasAllPermissions()) {
+        if (!hasAllPermissions(*perms)) {
             ActivityCompat.requestPermissions(
                 this,
                 perms,

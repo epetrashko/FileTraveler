@@ -6,9 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.epetrashko.domain.entity.FileEntity
 import com.epetrashko.domain.usecase.GetFilesByRouteUseCase
 import com.epetrashko.domain.usecase.ObserveChangedFilesUseCase
-import com.epetrashko.filetraveler.FilePresentation
-import com.epetrashko.filetraveler.utils.FileManager
-import com.epetrashko.filetraveler.utils.FilePresentationConverter
+import com.epetrashko.filetraveler.converter.FilePresentationConverter
+import com.epetrashko.filetraveler.manager.FileManager
+import com.epetrashko.filetraveler.presentation.FilePresentation
 import com.epetrashko.filetraveler.utils.MainSorter
 import com.epetrashko.filetraveler.utils.SortDirection
 import com.epetrashko.filetraveler.utils.getExtensionOrNull
@@ -41,7 +41,7 @@ class MainViewModel @Inject constructor(
         get() = if (routesStack.empty()) basePATH
         else "$basePATH$PATH_SEPARATOR${routesStack.joinToString(PATH_SEPARATOR)}"
 
-    private val _state = MutableStateFlow<MainState>(MainState.Loading(null))
+    private val _state = MutableStateFlow<MainState>(MainState.Loading(absoluteRoute))
     val state: Flow<MainState> = combineStates()
 
     private var currentUnprocessedFiles: List<FileEntity> = listOf()
@@ -57,6 +57,7 @@ class MainViewModel @Inject constructor(
 
     fun navigateTo(directoryName: String? = null, isWithPush: Boolean = true) {
         viewModelScope.launch {
+            if (mutex.isLocked) return@launch
             mutex.withLock {
                 if (isWithPush)
                     directoryName?.let(routesStack::push)
@@ -83,9 +84,9 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun startService() {
+    fun startServiceJob() {
         viewModelScope.launch {
-            _news.emit(MainNews.StartService)
+            _news.emit(MainNews.StartServiceJob)
         }
     }
 
@@ -108,40 +109,38 @@ class MainViewModel @Inject constructor(
         _state.value = MainState.Error(_state.value.currentRoute)
     }
 
-    fun onFileClick(file: FilePresentation) {
-        if (file.isDirectory) navigateTo(file.name)
-        else {
-            openFile(file.path, file.name.getExtensionOrNull())
+    fun showSortDialog() {
+        viewModelScope.launch {
+            if (_state.value is MainState.Data)
+                _news.emit(MainNews.ShowSortDialog)
         }
     }
 
-    private fun openFile(path: String, extension: String?) {
-        viewModelScope.launch {
-            _news.emit(
-                MainNews.OpenFile(
-                    mimeType = fileManager.getMimeTypeByExtension(extension),
-                    data = fileManager.getUriForFile(File(path))
+    fun onFileClick(file: FilePresentation) {
+        if (file.isDirectory) navigateTo(file.name)
+        else {
+            viewModelScope.launch {
+                _news.emit(
+                    MainNews.OpenFile(
+                        mimeType = fileManager.getMimeTypeByExtension(file.name.getExtensionOrNull()),
+                        data = fileManager.getUriForFile(File(file.path))
+                    )
                 )
-            )
+            }
         }
     }
 
     fun onFileLongClick(file: FilePresentation) {
-        if (!file.isDirectory) shareFile(
-            path = file.path,
-            extension = file.name.getExtensionOrNull()
-        )
-    }
-
-    private fun shareFile(path: String, extension: String?) {
-        viewModelScope.launch {
-            _news.emit(
-                MainNews.ShareFile(
-                    mimeType = fileManager.getMimeTypeByExtension(extension),
-                    data = fileManager.getUriForFile(File(path))
+        if (!file.isDirectory)
+            viewModelScope.launch {
+                _news.emit(
+                    MainNews.ShareFile(
+                        mimeType = fileManager.getMimeTypeByExtension(file.name.getExtensionOrNull()),
+                        data = fileManager.getUriForFile(File(file.path))
+                    )
                 )
-            )
-        }
+            }
+
     }
 
     private fun combineStates(): Flow<MainState> =

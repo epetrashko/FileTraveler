@@ -1,4 +1,4 @@
-package com.epetrashko.filetraveler.utils
+package com.epetrashko.filetraveler.manager
 
 import android.content.Context
 import android.net.Uri

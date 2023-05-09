@@ -7,6 +7,7 @@ class TraverseAndCalculateHashUseCase @Inject constructor(
     private val repository: FilesRepository
 ) {
 
-    suspend operator fun invoke() = repository.traverse()
+    suspend operator fun invoke() =
+        repository.traverse()
 
 }
