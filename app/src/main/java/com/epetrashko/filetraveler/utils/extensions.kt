@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -16,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.epetrashko.filetraveler.R
 import kotlinx.coroutines.launch
+
 
 fun View.setVisibility(isVisible: Boolean) {
     visibility = if (isVisible) View.VISIBLE else View.GONE
@@ -31,23 +34,36 @@ fun LifecycleOwner.launchWhenStarted(block: suspend () -> Unit) {
 
 fun String.getExtensionOrNull(): String? = substringAfterLast(".").ifEmpty { null }
 
-fun AppCompatActivity.checkRequiredPermissions(permissionCode: Int, vararg perms: String): Boolean {
+fun AppCompatActivity.checkRequiredPermissions(permissionCode: Int): Boolean {
     var isPermissionOn = true
     val version = Build.VERSION.SDK_INT
-    if (version >= Build.VERSION_CODES.M) {
-        if (!hasAllPermissions(*perms)) {
+    if (version >= Build.VERSION_CODES.R) {
+        if (Environment.isExternalStorageManager()) return true
+        startActivity(
+            Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                .apply {
+                    addCategory("android.intent.category.DEFAULT")
+                    data = getPackageUri()
+                }
+        )
+        isPermissionOn = false
+    } else if (version >= Build.VERSION_CODES.M) {
+        val perms = arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        if (!hasAllPermissions(perms)) {
             ActivityCompat.requestPermissions(
                 this,
                 perms,
                 permissionCode
             )
-            isPermissionOn = false
         }
     }
     return isPermissionOn
 }
 
-fun AppCompatActivity.hasAllPermissions(vararg perms: String): Boolean =
+private fun AppCompatActivity.getPackageUri(): Uri =
+    Uri.parse("package:$packageName")
+
+fun AppCompatActivity.hasAllPermissions(perms: Array<String>): Boolean =
     perms.all { perm ->
         PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this, perm)
     }

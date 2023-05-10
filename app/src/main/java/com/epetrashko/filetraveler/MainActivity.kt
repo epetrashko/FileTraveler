@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity(), FileItemActionListener {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == EXTERNAL_REQUEST) {
+        if (requestCode == EXTERNAL_STORAGE_PERMISSION_CODE) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 runJobsIfHasPermissions()
             } else {
@@ -180,7 +180,7 @@ class MainActivity : AppCompatActivity(), FileItemActionListener {
     }
 
     private fun runJobsIfHasPermissions() {
-        if (checkRequiredPermissions(permissionCode = EXTERNAL_REQUEST, perms = EXTERNAL_PERMS)) {
+        if (checkRequiredPermissions(permissionCode = EXTERNAL_STORAGE_PERMISSION_CODE)) {
             startFileService()
             viewModel.navigateTo()
         } else
@@ -209,10 +209,6 @@ class MainActivity : AppCompatActivity(), FileItemActionListener {
     }
 
     companion object {
-        private val EXTERNAL_PERMS = arrayOf(
-            android.Manifest.permission.READ_EXTERNAL_STORAGE
-        )
-
-        private const val EXTERNAL_REQUEST = 66
+        private const val EXTERNAL_STORAGE_PERMISSION_CODE = 66
     }
 }
